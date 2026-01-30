@@ -4,11 +4,28 @@ export type ParticleAction =
     | 'gather_sphere'
     | 'gather_cube'
     | 'gather_torus'
+    | 'gather_helix'
+    | 'gather_ring'
     | 'explode'
     | 'drift'
+    | 'move_up'
+    | 'move_down'
+    | 'move_left'
+    | 'move_right'
     | 'rotate_object'
     | 'scale_up'
-    | 'switch_object';
+    | 'scale_down'
+    | 'increase_speed'
+    | 'decrease_speed'
+    | 'increase_intensity'
+    | 'decrease_intensity'
+    | 'wave_motion'
+    | 'burst_effect'
+    | 'beam_effect'
+    | 'rock_effect'
+    | 'switch_object'
+    | 'grab_particles'
+    | 'release_particles';
 
 export interface ParticleCommand {
     action: ParticleAction;
@@ -37,11 +54,28 @@ export class GestureMapper {
             ['pinch', 'gather_sphere'],
             ['open_palm', 'explode'],
             ['fist', 'gather_cube'],
+            ['point_up', 'move_up'],
+            ['point_left', 'move_left'],
+            ['point_right', 'move_right'],
+            ['point_down', 'move_down'],
+            ['thumbs_up', 'increase_intensity'],
+            ['thumbs_down', 'decrease_intensity'],
+            ['peace_sign', 'gather_helix'],
+            ['ok_sign', 'gather_ring'],
+            ['rock_sign', 'rock_effect'],
+            ['gun_sign', 'beam_effect'],
+            ['call_sign', 'wave_motion'],
             ['swipe_left', 'switch_object'],
             ['swipe_right', 'switch_object'],
+            ['swipe_up', 'increase_speed'],
+            ['swipe_down', 'decrease_speed'],
             ['rotate_cw', 'rotate_object'],
             ['rotate_ccw', 'rotate_object'],
+            ['grab', 'grab_particles'],
+            ['release', 'release_particles'],
             ['two_hand_spread', 'scale_up'],
+            ['two_hand_clap', 'burst_effect'],
+            ['wave', 'wave_motion'],
         ]);
 
         // Apply custom mappings if provided

@@ -79,6 +79,13 @@ function ParticleScene() {
         if (handLandmarks && particleSystemRef.current && !contextLostRef.current) {
             const gestures = gestureClassifier.current.classify(handLandmarks);
 
+            // Update gesture store with the detected gesture
+            if (gestures.length > 0) {
+                const primaryGesture = gestures[0];
+                const { setCurrentGesture } = useGestureStore.getState();
+                setCurrentGesture(primaryGesture.type, primaryGesture.confidence);
+            }
+
             gestures.forEach((gesture) => {
                 if (gesture.type !== 'none') {
                     const command = gestureMapper.current.mapGesture(gesture);
