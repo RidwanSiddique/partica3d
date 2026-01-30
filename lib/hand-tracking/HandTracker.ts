@@ -11,11 +11,37 @@ export class HandTracker {
         // Initialization will happen asynchronously
     }
 
+    private checkWebGLSupport(): boolean {
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl2') || 
+                      canvas.getContext('webgl') || 
+                      canvas.getContext('experimental-webgl');
+            
+            if (!gl || !(gl instanceof WebGLRenderingContext || gl instanceof WebGL2RenderingContext)) {
+                console.warn('WebGL not available, MediaPipe may use CPU fallback');
+                return false;
+            }
+
+            const contextLost = (gl as WebGLRenderingContext).isContextLost();
+            canvas.remove();
+            
+            return !contextLost;
+        } catch (e) {
+            console.warn('WebGL support check failed:', e);
+            return false;
+        }
+    }
+
     private async initializeHands() {
         if (this.isInitialized) return;
 
         try {
-            // Dynamic import for MediaPipe Hands
+            const hasWebGL = this.checkWebGLSupport();
+            if (!hasWebGL) {
+                console.warn('WebGL not detected, MediaPipe will attempt to use CPU processing');
+            }
+
             const { Hands } = await import('@mediapipe/hands');
 
             this.hands = new Hands({
@@ -26,14 +52,23 @@ export class HandTracker {
 
             this.hands.setOptions({
                 maxNumHands: 2,
-                modelComplexity: 1,
+                modelComplexity: hasWebGL ? 1 : 0, // Use lighter model if no WebGL
                 minDetectionConfidence: 0.7,
                 minTrackingConfidence: 0.5,
+                selfieMode: true,
+                staticImageMode: false,
             });
 
             this.isInitialized = true;
         } catch (error) {
             console.error('Failed to initialize MediaPipe Hands:', error);
+            if (error instanceof Error) {
+                if (error.message.includes('fetch') || error.message.includes('network')) {
+                    throw new Error('Failed to load MediaPipe models. Please check your internet connection.');
+                } else if (error.message.includes('wasm')) {
+                    throw new Error('Failed to load WebAssembly modules. Your browser may not support MediaPipe.');
+                }
+            }
             throw error;
         }
     }
@@ -69,13 +104,19 @@ export class HandTracker {
             videoElement.srcObject = stream;
             await videoElement.play();
 
-            // Dynamic import for Camera
+            // Wait for video to stabilize
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             const { Camera } = await import('@mediapipe/camera_utils');
 
             this.camera = new Camera(videoElement, {
                 onFrame: async () => {
-                    if (this.hands && videoElement) {
-                        await this.hands.send({ image: videoElement });
+                    try {
+                        if (this.hands && videoElement && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+                            await this.hands.send({ image: videoElement });
+                        }
+                    } catch (frameError) {
+                        console.warn('Frame processing error:', frameError);
                     }
                 },
                 width: 1280,
@@ -85,6 +126,15 @@ export class HandTracker {
             await this.camera.start();
         } catch (error) {
             console.error('Error accessing camera:', error);
+            if (error instanceof Error) {
+                if (error.name === 'NotAllowedError') {
+                    throw new Error('Camera permission denied. Please allow camera access and try again.');
+                } else if (error.name === 'NotFoundError') {
+                    throw new Error('No camera found. Please connect a camera and try again.');
+                } else if (error.message.includes('WebGL')) {
+                    throw new Error('WebGL context error. Please close other browser tabs using 3D graphics and try again.');
+                }
+            }
             throw new Error('Failed to access camera. Please grant camera permissions.');
         }
     }

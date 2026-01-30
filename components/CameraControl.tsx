@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { HandTracker } from '@/lib/hand-tracking/HandTracker';
 import { useGestureStore } from '@/store/useGestureStore';
+import { WebGLUtils } from '@/lib/webgl-utils';
 
 export default function CameraControl() {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -42,8 +43,18 @@ export default function CameraControl() {
 
             setCameraEnabled(true);
         } catch (err) {
-            const errorMessage =
-                err instanceof Error ? err.message : 'Failed to access camera';
+            let errorMessage = 'Failed to access camera';
+            
+            if (err instanceof Error) {
+                errorMessage = err.message;
+                
+                if (err.message.includes('WebGL')) {
+                    errorMessage += '\n\nTry:\n• Closing other browser tabs\n• Restarting your browser\n• Updating your graphics drivers';
+                } else if (err.message.includes('permission')) {
+                    errorMessage += '\n\nPlease allow camera access in your browser settings.';
+                }
+            }
+            
             setError(errorMessage);
             console.error('Camera error:', err);
         } finally {
@@ -58,6 +69,27 @@ export default function CameraControl() {
             setIsTracking(false);
             setHandLandmarks(null);
         }
+    };
+
+    const runDiagnostics = () => {
+        const webglInfo = WebGLUtils.getInfo();
+        const hasWebGL = WebGLUtils.checkSupport();
+        
+        let diagnosticMessage = `WebGL Support: ${hasWebGL ? 'Yes' : 'No'}\n`;
+        
+        if (webglInfo) {
+            diagnosticMessage += `Version: ${webglInfo.version}\n`;
+            diagnosticMessage += `Renderer: ${webglInfo.renderer}\n`;
+            diagnosticMessage += `Vendor: ${webglInfo.vendor}\n`;
+            diagnosticMessage += `Max Texture Size: ${webglInfo.maxTextureSize}\n`;
+        }
+        
+        const recommendations = WebGLUtils.getRecommendations();
+        if (recommendations.length > 0) {
+            diagnosticMessage += `\nRecommendations:\n${recommendations.join('\n')}`;
+        }
+        
+        setError(diagnosticMessage);
     };
 
     return (
@@ -88,10 +120,32 @@ export default function CameraControl() {
 
             {/* Error message */}
             {error && (
-                <div className="bg-red-500/90 text-white px-4 py-3 rounded-lg max-w-xs">
-                    <p className="text-sm font-medium">Error</p>
-                    <p className="text-xs mt-1">{error}</p>
+                <div className="bg-red-500/90 text-white px-4 py-3 rounded-lg max-w-sm">
+                    <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium">
+                                {error.includes('WebGL Support:') ? 'System Diagnostics' : 'Error'}
+                            </p>
+                            <pre className="text-xs mt-1 whitespace-pre-line font-sans">{error}</pre>
+                        </div>
+                        <button
+                            onClick={() => setError(null)}
+                            className="ml-2 text-white/70 hover:text-white"
+                        >
+                            ×
+                        </button>
+                    </div>
                 </div>
+            )}
+
+            {/* Diagnostic button - only show if there's an error or camera is disabled */}
+            {(!cameraEnabled || error) && (
+                <button
+                    onClick={runDiagnostics}
+                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+                >
+                    Run Diagnostics
+                </button>
             )}
 
             {/* Camera status indicator */}

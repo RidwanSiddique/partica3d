@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { WebGLErrorBoundary } from "@/components/WebGLErrorBoundary";
 
 export const metadata: Metadata = {
   title: "Gesture-Controlled Particle System",
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <WebGLErrorBoundary>
+          {children}
+        </WebGLErrorBoundary>
       </body>
     </html>
   );

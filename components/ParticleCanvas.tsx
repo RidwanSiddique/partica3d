@@ -15,9 +15,45 @@ function ParticleScene() {
     const gestureClassifier = useRef(new GestureClassifier());
     const gestureMapper = useRef(new GestureMapper());
     const commandQueueRef = useRef<ParticleCommand[]>([]);
+    const contextLostRef = useRef(false);
 
     const { mode, currentFormation, particleCount, rotationSpeed, scale } = useParticleStore();
     const { handLandmarks } = useGestureStore();
+
+    // Handle WebGL context loss/restore
+    useEffect(() => {
+        const handleContextLost = (event: Event) => {
+            console.warn('WebGL context lost, preventing default behavior');
+            event.preventDefault();
+            contextLostRef.current = true;
+        };
+
+        const handleContextRestored = () => {
+            console.log('WebGL context restored, reinitializing particle system');
+            contextLostRef.current = false;
+            if (particleSystemRef.current) {
+                particleSystemRef.current.dispose();
+                particleSystemRef.current = new ParticleSystem({
+                    particleCount,
+                    particleSize: 0.02,
+                    particleColor: new THREE.Color(0x00ffff),
+                    driftSpeed: 0.1,
+                    noiseScale: 0.5,
+                });
+            }
+        };
+
+        const canvas = document.querySelector('canvas');
+        if (canvas) {
+            canvas.addEventListener('webglcontextlost', handleContextLost);
+            canvas.addEventListener('webglcontextrestored', handleContextRestored);
+
+            return () => {
+                canvas.removeEventListener('webglcontextlost', handleContextLost);
+                canvas.removeEventListener('webglcontextrestored', handleContextRestored);
+            };
+        }
+    }, [particleCount]);
 
     // Initialize particle system
     useEffect(() => {
@@ -40,7 +76,7 @@ function ParticleScene() {
 
     // Process hand landmarks and gestures
     useEffect(() => {
-        if (handLandmarks && particleSystemRef.current) {
+        if (handLandmarks && particleSystemRef.current && !contextLostRef.current) {
             const gestures = gestureClassifier.current.classify(handLandmarks);
 
             gestures.forEach((gesture) => {
