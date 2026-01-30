@@ -10,9 +10,20 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/hands": "^0.4.1675469240",
+    "@prisma/client": "^7.3.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "dotenv": "^17.2.3",
     "next": "16.1.6",
+    "next-auth": "^4.24.13",
+    "prisma": "^7.3.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "simplex-noise": "^4.0.3",
+    "three": "^0.182.0",
+    "zustand": "^5.0.10"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
@@ -20,6 +31,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.182.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

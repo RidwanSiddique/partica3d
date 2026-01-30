@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String           @id @default(cuid())
+  email         String           @unique
+  name          String?
+  createdAt     DateTime         @default(now())
+  gestureMaps   GestureMapping[]
+  sessions      Session[]
+}
+
+model GestureMapping {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gestureName String   // "pinch", "open_palm", "fist", etc.
+  action      String   // "gather_sphere", "explode", "morph_cube"
+  objectType  String?  // "sphere", "cube", "torus"
+  parameters  Json?    // Custom parameters for the action
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Preset {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  isPublic       Boolean  @default(false)
+  gestureMaps    Json     // Array of gesture mappings
+  particleConfig Json     // Particle system configuration
+  createdBy      String?
+  createdAt      DateTime @default(now())
+
+  @@index([isPublic])
+}
+
+model Session {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startTime    DateTime  @default(now())
+  endTime      DateTime?
+  gesturesUsed Json      // Analytics: which gestures were used
+  duration     Int?      // Session duration in seconds
+
+  @@index([userId])
+}
