@@ -114,39 +114,24 @@ function ParticleScene() {
         const speed = command.parameters?.speed || 1;
 
         switch (command.action) {
+            case 'explode':
+                particleSystemRef.current.explode(intensity * 5);
+                break;
             case 'gather_sphere':
                 particleSystemRef.current.morphToFormation('sphere', 2000 / speed);
                 useParticleStore.getState().setFormation('sphere');
                 break;
-            case 'gather_cube':
-                particleSystemRef.current.morphToFormation('cube', 2000 / speed);
-                useParticleStore.getState().setFormation('cube');
+            case 'form_heart':
+                particleSystemRef.current.morphToFormation('heart', 2000 / speed);
+                useParticleStore.getState().setFormation('heart');
                 break;
-            case 'gather_torus':
-                particleSystemRef.current.morphToFormation('torus', 2000 / speed);
-                useParticleStore.getState().setFormation('torus');
+            case 'form_sorry_text':
+                particleSystemRef.current.morphToFormation('sorry', 2000 / speed);
+                useParticleStore.getState().setFormation('sorry');
                 break;
-            case 'explode':
-                particleSystemRef.current.explode(intensity * 5);
-                break;
-            case 'drift':
-                particleSystemRef.current.setDriftMode();
-                useParticleStore.getState().setMode('drift');
-                break;
-            case 'rotate_object':
-                const rotSpeed = (command.parameters?.angle || 0) * 2;
-                particleSystemRef.current.rotate(rotSpeed);
-                useParticleStore.getState().setRotationSpeed(rotSpeed);
-                break;
-            case 'scale_up':
-                const newScale = command.parameters?.scale || 1;
-                particleSystemRef.current.setScale(newScale);
-                useParticleStore.getState().setScale(newScale);
-                break;
-            case 'switch_object':
-                const nextFormation = gestureMapper.current.getCurrentObjectType();
-                particleSystemRef.current.morphToFormation(nextFormation, 1500);
-                useParticleStore.getState().setFormation(nextFormation);
+            case 'form_love_text':
+                particleSystemRef.current.morphToFormation('love', 2000 / speed);
+                useParticleStore.getState().setFormation('love');
                 break;
         }
     };
