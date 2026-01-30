@@ -8,7 +8,6 @@ const gestureDescriptions: Record<string, string> = {
     fist: '✊ Make a fist',
     ok_sign: '👌 OK sign (thumb-index circle)',
     peace_sign: '✌️ Peace sign (V with fingers)',
-    thumbs: '👍 Thumbs up or down',
     none: 'No gesture detected',
 };
 
@@ -16,8 +15,7 @@ const gestureActions: Record<string, string> = {
     open_palm: '→ Explode particles',
     fist: '→ Form sphere',
     ok_sign: '→ Create heart shape ❤️',
-    peace_sign: '→ Show "SORRY" text',
-    thumbs: '→ Show "I LOVE YOU" text',
+    peace_sign: '→ Create apology spiral 🌀',
     none: '',
 };
 

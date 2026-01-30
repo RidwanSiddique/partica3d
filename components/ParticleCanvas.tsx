@@ -125,13 +125,13 @@ function ParticleScene() {
                 particleSystemRef.current.morphToFormation('heart', 2000 / speed);
                 useParticleStore.getState().setFormation('heart');
                 break;
-            case 'form_sorry_text':
-                particleSystemRef.current.morphToFormation('sorry', 2000 / speed);
-                useParticleStore.getState().setFormation('sorry');
+            case 'form_apology_spiral':
+                particleSystemRef.current.morphToFormation('apology_spiral', 2000 / speed);
+                useParticleStore.getState().setFormation('apology_spiral');
                 break;
-            case 'form_love_text':
-                particleSystemRef.current.morphToFormation('love', 2000 / speed);
-                useParticleStore.getState().setFormation('love');
+            case 'form_love_hearts':
+                particleSystemRef.current.morphToFormation('love_hearts', 2000 / speed);
+                useParticleStore.getState().setFormation('love_hearts');
                 break;
         }
     };

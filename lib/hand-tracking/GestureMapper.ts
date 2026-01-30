@@ -4,8 +4,8 @@ export type ParticleAction =
     | 'explode'
     | 'gather_sphere'
     | 'form_heart'
-    | 'form_sorry_text'
-    | 'form_love_text';
+    | 'form_apology_spiral'
+    | 'form_love_hearts';
 
 export interface ParticleCommand {
     action: ParticleAction;
@@ -29,13 +29,12 @@ export class GestureMapper {
     private objectTypes = ['sphere', 'cube', 'torus'];
 
     constructor(customMappings?: GestureMapping[]) {
-        // Default mappings - 5 core gestures only
+        // Default mappings - 4 core gestures only
         this.mappings = new Map([
             ['open_palm', 'explode'],
             ['fist', 'gather_sphere'],
             ['ok_sign', 'form_heart'],
-            ['peace_sign', 'form_sorry_text'],
-            ['thumbs', 'form_love_text'],
+            ['peace_sign', 'form_apology_spiral'],
         ]);
 
         // Apply custom mappings if provided
@@ -60,7 +59,6 @@ export class GestureMapper {
             case 'fist':
             case 'ok_sign':
             case 'peace_sign':
-            case 'thumbs':
                 command.parameters = {
                     intensity: event.confidence,
                     speed: 1.0,

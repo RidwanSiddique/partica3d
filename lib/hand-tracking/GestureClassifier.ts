@@ -6,7 +6,6 @@ export type GestureType =
     | 'fist'
     | 'ok_sign'
     | 'peace_sign'
-    | 'thumbs'
     | 'none';
 
 export interface GestureEvent {
@@ -60,11 +59,7 @@ export class GestureClassifier {
                 continue;
             }
 
-            const thumbs = this.detectThumbs(landmarks, handIndex);
-            if (thumbs) {
-                events.push(thumbs);
-                continue;
-            }
+
         }
 
         return events.length > 0 ? events : [{ type: 'none', confidence: 1.0, handIndex: -1 }];
@@ -97,48 +92,42 @@ export class GestureClassifier {
     }
 
     private detectFist(landmarks: NormalizedLandmark[], handIndex: number): GestureEvent | null {
-        // Check if all fingers are curled into the palm
-        const fingersCurled = [
-            landmarks[8].y > landmarks[5].y,   // Index
-            landmarks[12].y > landmarks[9].y,  // Middle
-            landmarks[16].y > landmarks[13].y, // Ring
-            landmarks[20].y > landmarks[17].y, // Pinky
-        ];
-
-        const thumbCurled = landmarks[4].y > landmarks[3].y - 0.01;
-        const allFingersCurled = fingersCurled.every(curled => curled) && thumbCurled;
-
-        if (allFingersCurled) {
-            return {
-                type: 'fist',
-                confidence: 0.8,
-                handIndex,
-            };
-        }
-
-        return null;
-    }
-
-    private detectThumbs(landmarks: NormalizedLandmark[], handIndex: number): GestureEvent | null {
+        // Improved fist detection - check if all fingers are curled with tighter thresholds
         const thumbTip = landmarks[4];
-        const thumbMcp = landmarks[2];
+        const indexTip = landmarks[8];
+        const middleTip = landmarks[12];
+        const ringTip = landmarks[16];
+        const pinkyTip = landmarks[20];
+        
+        // MCP joints for reference
         const indexMcp = landmarks[5];
         const middleMcp = landmarks[9];
         const ringMcp = landmarks[13];
         const pinkyMcp = landmarks[17];
-
-        // Check if thumb is extended vertically
-        const thumbExtended = Math.abs(thumbTip.y - thumbMcp.y) > 0.03;
         
-        // Check if other fingers are curled
-        const indexCurled = landmarks[8].y > indexMcp.y;
-        const middleCurled = landmarks[12].y > middleMcp.y;
-        const ringCurled = landmarks[16].y > ringMcp.y;
-        const pinkyCurled = landmarks[20].y > pinkyMcp.y;
+        // PIP joints for more accurate curl detection
+        const indexPip = landmarks[6];
+        const middlePip = landmarks[10];
+        const ringPip = landmarks[14];
+        const pinkyPip = landmarks[18];
 
-        if (thumbExtended && indexCurled && middleCurled && ringCurled && pinkyCurled) {
+        // Check if fingertips are below PIP joints (strongly curled)
+        const fingersCurled = [
+            indexTip.y > indexPip.y + 0.01,   // Index strongly curled
+            middleTip.y > middlePip.y + 0.01, // Middle strongly curled
+            ringTip.y > ringPip.y + 0.01,    // Ring strongly curled
+            pinkyTip.y > pinkyPip.y + 0.01,  // Pinky strongly curled
+        ];
+
+        // Check thumb is not extended (avoid confusion with thumbs up)
+        const thumbNotExtended = Math.abs(thumbTip.y - landmarks[2].y) < 0.02;
+        
+        // All fingers must be curled and thumb must not be extended
+        const allFingersCurled = fingersCurled.every(curled => curled) && thumbNotExtended;
+
+        if (allFingersCurled) {
             return {
-                type: 'thumbs',
+                type: 'fist',
                 confidence: 0.8,
                 handIndex,
             };
