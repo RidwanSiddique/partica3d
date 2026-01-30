@@ -44,7 +44,7 @@ export class GestureClassifier {
         }
 
         // Check single-hand gestures
-        results.multiHandLandmarks.forEach((landmarks, handIndex) => {
+        results.multiHandLandmarks.forEach((landmarks: NormalizedLandmark[], handIndex: number) => {
             const pinch = this.detectPinch(landmarks, handIndex);
             if (pinch) {
                 events.push(pinch);
