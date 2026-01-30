@@ -21,8 +21,6 @@ export interface GestureEvent {
 
 export class GestureClassifier {
     private previousHandPositions: Map<string, NormalizedLandmark> = new Map();
-    private gestureHistory: GestureType[] = [];
-    private readonly historySize = 5;
 
     classify(results: Results): GestureEvent[] {
         const events: GestureEvent[] = [];
@@ -34,65 +32,35 @@ export class GestureClassifier {
         for (let handIndex = 0; handIndex < results.multiHandLandmarks.length; handIndex++) {
             const landmarks = results.multiHandLandmarks[handIndex];
 
-            // Try to detect each gesture in order of reliability
+            // Detect all possible gestures and pick the one with highest confidence
+            const candidateGestures: GestureEvent[] = [];
+            
             const openPalm = this.detectOpenPalm(landmarks, handIndex);
-            if (openPalm) {
-                events.push(openPalm);
-                continue;
-            }
+            if (openPalm) candidateGestures.push(openPalm);
 
             const fist = this.detectFist(landmarks, handIndex);
-            if (fist) {
-                events.push(fist);
-                continue;
-            }
+            if (fist) candidateGestures.push(fist);
 
             const okSign = this.detectOkSign(landmarks, handIndex);
-            if (okSign) {
-                events.push(okSign);
-                continue;
-            }
+            if (okSign) candidateGestures.push(okSign);
 
             const peaceSign = this.detectPeaceSign(landmarks, handIndex);
-            if (peaceSign) {
-                events.push(peaceSign);
-                continue;
+            if (peaceSign) candidateGestures.push(peaceSign);
+
+            // Pick the gesture with highest confidence
+            if (candidateGestures.length > 0) {
+                const bestGesture = candidateGestures.reduce((best, current) => 
+                    current.confidence > best.confidence ? current : best
+                );
+                events.push(bestGesture);
             }
-
-
         }
 
         return events.length > 0 ? events : [{ type: 'none', confidence: 1.0, handIndex: -1 }];
     }
 
     private detectOpenPalm(landmarks: NormalizedLandmark[], handIndex: number): GestureEvent | null {
-        // Check if all fingers are extended
-        const fingersExtended = [
-            landmarks[8].y < landmarks[5].y - 0.02,  // Index
-            landmarks[12].y < landmarks[9].y - 0.02, // Middle
-            landmarks[16].y < landmarks[13].y - 0.02, // Ring
-            landmarks[20].y < landmarks[17].y - 0.02, // Pinky
-        ];
-
-        const thumbExtended = landmarks[4].x > landmarks[3].x + 0.02 || landmarks[4].x < landmarks[3].x - 0.02;
-        const allFingersExtended = fingersExtended.every(extended => extended) && thumbExtended;
-
-        if (allFingersExtended) {
-            // Check finger spread to distinguish from other gestures
-            const fingerSpread = this.calculateFingerSpread(landmarks);
-            
-            return {
-                type: 'open_palm',
-                confidence: Math.min(0.9, fingerSpread * 2),
-                handIndex,
-            };
-        }
-
-        return null;
-    }
-
-    private detectFist(landmarks: NormalizedLandmark[], handIndex: number): GestureEvent | null {
-        // Improved fist detection - check if all fingers are curled with tighter thresholds
+        // Strict open palm detection - all fingers must be clearly extended
         const thumbTip = landmarks[4];
         const indexTip = landmarks[8];
         const middleTip = landmarks[12];
@@ -105,30 +73,103 @@ export class GestureClassifier {
         const ringMcp = landmarks[13];
         const pinkyMcp = landmarks[17];
         
-        // PIP joints for more accurate curl detection
+        // PIP joints
         const indexPip = landmarks[6];
         const middlePip = landmarks[10];
         const ringPip = landmarks[14];
         const pinkyPip = landmarks[18];
 
-        // Check if fingertips are below PIP joints (strongly curled)
-        const fingersCurled = [
-            indexTip.y > indexPip.y + 0.01,   // Index strongly curled
-            middleTip.y > middlePip.y + 0.01, // Middle strongly curled
-            ringTip.y > ringPip.y + 0.01,    // Ring strongly curled
-            pinkyTip.y > pinkyPip.y + 0.01,  // Pinky strongly curled
+        // Check if all fingertips are significantly far from their MCP joints
+        const tipToMcpDistances = [
+            this.calculateDistance(indexTip, indexMcp),
+            this.calculateDistance(middleTip, middleMcp),
+            this.calculateDistance(ringTip, ringMcp),
+            this.calculateDistance(pinkyTip, pinkyMcp),
         ];
 
-        // Check thumb is not extended (avoid confusion with thumbs up)
-        const thumbNotExtended = Math.abs(thumbTip.y - landmarks[2].y) < 0.02;
-        
-        // All fingers must be curled and thumb must not be extended
-        const allFingersCurled = fingersCurled.every(curled => curled) && thumbNotExtended;
+        // Check if all fingertips are far from their PIP joints (indicating extension)
+        const tipToPipDistances = [
+            this.calculateDistance(indexTip, indexPip),
+            this.calculateDistance(middleTip, middlePip),
+            this.calculateDistance(ringTip, ringPip),
+            this.calculateDistance(pinkyTip, pinkyPip),
+        ];
 
-        if (allFingersCurled) {
+        // All fingers must be extended (tips far from PIPs)
+        const fingersExtended = tipToPipDistances.every(dist => dist > 0.06); // Stricter threshold
+        
+        // Check that fingers are spread out (not close together like in other gestures)
+        const fingerSpread = this.calculateFingerSpread(landmarks);
+        const wellSpread = fingerSpread > 0.15; // Must have good finger separation
+        
+        // Thumb must be extended away from palm
+        const wrist = landmarks[0];
+        const thumbToWristDist = this.calculateDistance(thumbTip, wrist);
+        const thumbMcpToWristDist = this.calculateDistance(landmarks[1], wrist);
+        const thumbExtended = thumbToWristDist > thumbMcpToWristDist * 1.4; // Stricter
+        
+        // Palm center check - tips should be far from palm center
+        const palmCenter = middleMcp;
+        const avgTipToPalmDist = tipToMcpDistances.reduce((sum, dist) => sum + dist, 0) / tipToMcpDistances.length;
+        const palmClearance = avgTipToPalmDist > 0.12; // Minimum distance from palm center
+
+        if (fingersExtended && wellSpread && thumbExtended && palmClearance) {
+            const confidence = Math.min(0.9, 0.5 + (fingerSpread * 2) + (avgTipToPalmDist * 2));
+            
+            return {
+                type: 'open_palm',
+                confidence,
+                handIndex,
+            };
+        }
+
+        return null;
+    }
+
+    private detectFist(landmarks: NormalizedLandmark[], handIndex: number): GestureEvent | null {
+        // Simplified fist detection - all fingertips should be close to palm center
+        const thumbTip = landmarks[4];
+        const indexTip = landmarks[8];
+        const middleTip = landmarks[12];
+        const ringTip = landmarks[16];
+        const pinkyTip = landmarks[20];
+        
+        // Palm center (middle MCP)
+        const palmCenter = landmarks[9];
+        
+        // Calculate distances from all fingertips to palm center
+        const tipToPalmDistances = [
+            this.calculateDistance(indexTip, palmCenter),
+            this.calculateDistance(middleTip, palmCenter),
+            this.calculateDistance(ringTip, palmCenter),
+            this.calculateDistance(pinkyTip, palmCenter),
+        ];
+        
+        // Thumb distance to palm center
+        const thumbToPalmDist = this.calculateDistance(thumbTip, palmCenter);
+        
+        // All fingertips should be close to palm (curled inward)
+        const fingersCurled = tipToPalmDistances.every(dist => dist < 0.08); // Close to palm
+        const thumbCurled = thumbToPalmDist < 0.09; // Thumb also close to palm
+        
+        // Additional check: fingertips should be close to their own PIP joints
+        const tipToPipDistances = [
+            this.calculateDistance(indexTip, landmarks[6]),
+            this.calculateDistance(middleTip, landmarks[10]),
+            this.calculateDistance(ringTip, landmarks[14]),
+            this.calculateDistance(pinkyTip, landmarks[18]),
+        ];
+        
+        const tightlyCurled = tipToPipDistances.every(dist => dist < 0.05);
+        
+        if (fingersCurled && thumbCurled && tightlyCurled) {
+            // Calculate confidence based on how close fingers are to palm
+            const avgTipToPalmDist = tipToPalmDistances.reduce((sum, dist) => sum + dist, 0) / tipToPalmDistances.length;
+            const confidence = Math.min(0.95, Math.max(0.6, 1 - (avgTipToPalmDist * 10)));
+            
             return {
                 type: 'fist',
-                confidence: 0.8,
+                confidence,
                 handIndex,
             };
         }
@@ -197,6 +238,5 @@ export class GestureClassifier {
 
     reset() {
         this.previousHandPositions.clear();
-        this.gestureHistory = [];
     }
 }

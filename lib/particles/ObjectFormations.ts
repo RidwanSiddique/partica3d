@@ -149,17 +149,58 @@ export class ObjectFormations {
     static generateApologySpiral(count: number, size: number = 2): THREE.Vector3[] {
         const positions: THREE.Vector3[] = [];
         
-        // Create a downward spiral representing remorse/sadness
+        // Create a 3D filled DNA double helix structure
+        const height = size * 4; // Total height of DNA structure
+        const radius = size * 0.8; // Radius of the helix
+        const turns = 3; // Number of complete turns
+        
         for (let i = 0; i < count; i++) {
-            const t = (i / count) * Math.PI * 6; // Multiple spirals
-            const radius = size * (1 - (i / count) * 0.8); // Shrinking radius
-            const height = -((i / count) * size * 2); // Descending motion
+            const random = Math.random();
             
-            const x = radius * Math.cos(t);
-            const z = radius * Math.sin(t);
-            const y = height + Math.sin(t * 3) * 0.2; // Slight wave motion
-            
-            positions.push(new THREE.Vector3(x, y, z));
+            if (random < 0.4) {
+                // Generate points for first helix strand
+                const t = (Math.random()) * turns * Math.PI * 2;
+                const y = (Math.random() - 0.5) * height;
+                const helixRadius = radius + (Math.random() - 0.5) * size * 0.2;
+                
+                const x = helixRadius * Math.cos(t + y / height * turns * Math.PI * 2);
+                const z = helixRadius * Math.sin(t + y / height * turns * Math.PI * 2);
+                
+                positions.push(new THREE.Vector3(x, y, z));
+                
+            } else if (random < 0.8) {
+                // Generate points for second helix strand (offset by π)
+                const t = (Math.random()) * turns * Math.PI * 2;
+                const y = (Math.random() - 0.5) * height;
+                const helixRadius = radius + (Math.random() - 0.5) * size * 0.2;
+                
+                const x = helixRadius * Math.cos(t + y / height * turns * Math.PI * 2 + Math.PI);
+                const z = helixRadius * Math.sin(t + y / height * turns * Math.PI * 2 + Math.PI);
+                
+                positions.push(new THREE.Vector3(x, y, z));
+                
+            } else {
+                // Generate connecting base pairs between the strands
+                const y = (Math.random() - 0.5) * height;
+                const angle = y / height * turns * Math.PI * 2;
+                
+                // Random point along the line connecting the two strands
+                const connectionT = Math.random();
+                const strand1X = radius * Math.cos(angle);
+                const strand1Z = radius * Math.sin(angle);
+                const strand2X = radius * Math.cos(angle + Math.PI);
+                const strand2Z = radius * Math.sin(angle + Math.PI);
+                
+                const x = strand1X + (strand2X - strand1X) * connectionT;
+                const z = strand1Z + (strand2Z - strand1Z) * connectionT;
+                
+                // Add some thickness to the base pairs
+                const thickness = (Math.random() - 0.5) * size * 0.3;
+                const perpX = -Math.sin(angle) * thickness;
+                const perpZ = Math.cos(angle) * thickness;
+                
+                positions.push(new THREE.Vector3(x + perpX, y, z + perpZ));
+            }
         }
         
         return positions;
